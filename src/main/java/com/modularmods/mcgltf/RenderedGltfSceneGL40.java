@@ -36,8 +36,6 @@ public class RenderedGltfSceneGL40 extends RenderedGltfScene {
 		RenderedGltfModel.CURRENT_SHADER_INSTANCE.PROJECTION_MATRIX.set(RenderSystem.getProjectionMatrix());
 		RenderedGltfModel.CURRENT_SHADER_INSTANCE.PROJECTION_MATRIX.upload();
 		
-		RenderedGltfModel.CURRENT_SHADER_INSTANCE.INVERSE_VIEW_ROTATION_MATRIX.set(RenderSystem.getInverseViewRotationMatrix());
-		RenderedGltfModel.CURRENT_SHADER_INSTANCE.INVERSE_VIEW_ROTATION_MATRIX.upload();
 		
 		RenderedGltfModel.CURRENT_SHADER_INSTANCE.FOG_START.set(RenderSystem.getShaderFogStart());
 		RenderedGltfModel.CURRENT_SHADER_INSTANCE.FOG_START.upload();

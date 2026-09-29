@@ -35,19 +35,18 @@ import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.common.ForgeConfigSpec.EnumValue;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.IExtensionPoint;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.network.NetworkConstants;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec.EnumValue;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 
-@Mod(MCglTF.MODID)
-@Mod.EventBusSubscriber(value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod(value = MCglTF.MODID, dist = Dist.CLIENT)
+@EventBusSubscriber(modid = MCglTF.MODID, value = Dist.CLIENT)
 public class MCglTF {
 
 	public static final String MODID = "mcgltf";
@@ -57,7 +56,7 @@ public class MCglTF {
 	
 	private static MCglTF INSTANCE;
 	
-	private final Pair<CompatibilityConfig, ForgeConfigSpec> specPair = new ForgeConfigSpec.Builder().configure(CompatibilityConfig::new);
+	private final Pair<CompatibilityConfig, ModConfigSpec> specPair = new ModConfigSpec.Builder().configure(CompatibilityConfig::new);
 	
 	private int glProgramSkinnig = -1;
 	private int defaultColorMap;
@@ -70,22 +69,10 @@ public class MCglTF {
 	private final List<IGltfModelReceiver> gltfModelReceivers = new ArrayList<IGltfModelReceiver>();
 	private final List<Runnable> gltfRenderData = new ArrayList<Runnable>();
 	
-	private final boolean isOptiFineExist;
-	
-	public MCglTF() {
+	public MCglTF(ModContainer modContainer) {
 		INSTANCE = this;
-		//Make sure the mod being absent on the other network side does not cause the client to display the server as incompatible
-		ModLoadingContext.get().registerExtensionPoint(IExtensionPoint.DisplayTest.class, () -> new IExtensionPoint.DisplayTest(() -> NetworkConstants.IGNORESERVERONLY, (a, b) -> true));
 		
-		Class<?> clazz = null;
-		try {
-			clazz = Class.forName("net.optifine.shaders.Shaders");
-		} catch (ClassNotFoundException e) {
-			//Hush
-		}
-		isOptiFineExist = clazz != null;
-		
-		ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, specPair.getRight());
+		modContainer.registerConfig(ModConfig.Type.CLIENT, specPair.getRight());
 		
 		Minecraft.getInstance().execute(() -> {
 			switch(INSTANCE.specPair.getLeft().renderedModelGLProfile.get()) {
@@ -107,17 +94,20 @@ public class MCglTF {
 		});
 	}
 	
-	//Configs from ForgeConfigSpec is not yet loaded at this event.
+	//Configs from ModConfigSpec is not yet loaded at this event.
 	@SubscribeEvent
 	public static void onEvent(RegisterClientReloadListenersEvent event) {
-		INSTANCE.lightTexture = Minecraft.getInstance().getTextureManager().getTexture(new ResourceLocation("dynamic/light_map_1"));
+		INSTANCE.lightTexture = Minecraft.getInstance().getTextureManager().getTexture(ResourceLocation.parse("dynamic/light_map_1"));
 		
 		GL11.glPixelStorei(GL11.GL_UNPACK_ROW_LENGTH, 0);
 		GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_ROWS, 0);
 		GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_PIXELS, 0);
 		GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 4);
 		
-		int currentTexture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+					int currentTexture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+					int currentVertexArray = GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING);
+					int currentArrayBuffer = GL11.glGetInteger(GL15.GL_ARRAY_BUFFER_BINDING);
+					int currentElementArrayBuffer = GL11.glGetInteger(GL15.GL_ELEMENT_ARRAY_BUFFER_BINDING);
 		
 		INSTANCE.defaultColorMap = GL11.glGenTextures();
 		GL11.glBindTexture(GL11.GL_TEXTURE_2D, INSTANCE.defaultColorMap);
@@ -186,11 +176,11 @@ public class MCglTF {
 					else INSTANCE.processRenderedGltfModelsGL33(lookup);
 					break;
 				}
-				GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
-				GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
-				GL30.glBindVertexArray(0);
-				
-				GL11.glBindTexture(GL11.GL_TEXTURE_2D, currentTexture);
+					GL30.glBindVertexArray(currentVertexArray);
+					GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, currentArrayBuffer);
+					GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, currentElementArrayBuffer);
+
+					GL11.glBindTexture(GL11.GL_TEXTURE_2D, currentTexture);
 				
 				INSTANCE.loadedBufferResources.clear();
 				INSTANCE.loadedImageResources.clear();
@@ -282,7 +272,7 @@ public class MCglTF {
 	}
 	
 	public boolean isShaderModActive() {
-		return isOptiFineExist && net.optifine.shaders.Shaders.isShaderPackInitialized && !net.optifine.shaders.Shaders.currentShaderName.equals(net.optifine.shaders.Shaders.SHADER_PACK_NAME_DEFAULT);
+		return false;
 	}
 	
 	public static MCglTF getInstance() {
@@ -421,7 +411,7 @@ public class MCglTF {
 	static class CompatibilityConfig {
 		final EnumValue<EnumRenderedModelGLProfile> renderedModelGLProfile;
 		
-		CompatibilityConfig(ForgeConfigSpec.Builder builder) {
+		CompatibilityConfig(ModConfigSpec.Builder builder) {
 			builder.comment("Client-only settings")
 			.push("compatibility");
 			renderedModelGLProfile = builder.comment("Set maximum version of OpenGL to enable some optimizations for rendering glTF model.",

@@ -28,6 +28,8 @@ import com.google.gson.Gson;
 import com.jme3.util.mikktspace.MikkTSpaceContext;
 import com.jme3.util.mikktspace.MikktspaceTangentGenerator;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+
 import de.javagl.jgltf.model.AccessorByteData;
 import de.javagl.jgltf.model.AccessorData;
 import de.javagl.jgltf.model.AccessorDatas;
@@ -108,6 +110,7 @@ public class RenderedGltfModel {
 	public static ShaderInstance CURRENT_SHADER_INSTANCE;
 	protected static Matrix4f CURRENT_POSE;
 	protected static Matrix3f CURRENT_NORMAL;
+	protected static boolean CURRENT_POSE_APPLY_VIEW_MATRIX = true;
 	public static Vector3f LIGHT0_DIRECTION;
 	public static Vector3f LIGHT1_DIRECTION;
 	
@@ -396,9 +399,9 @@ public class RenderedGltfModel {
 		int glVertexArray = GL30.glGenVertexArrays();
 		gltfRenderData.add(() -> GL30.glDeleteVertexArrays(glVertexArray));
 		GL30.glBindVertexArray(glVertexArray);
-		
+
 		List<Map<String, AccessorModel>> morphTargets = meshPrimitiveModel.getTargets();
-		
+
 		List<AccessorFloatData> targetAccessorDatas = new ArrayList<AccessorFloatData>(morphTargets.size());
 		if(createMorphTarget(morphTargets, targetAccessorDatas, "POSITION")) {
 			bindVec3FloatMorphed(gltfRenderData, nodeModel, meshModel, renderCommand, positionsAccessorModel, targetAccessorDatas);
@@ -527,7 +530,7 @@ public class RenderedGltfModel {
 			});
 		}
 	}
-	
+
 	protected void processMeshPrimitiveModelSimpleTangent(List<Runnable> gltfRenderData, NodeModel nodeModel, MeshModel meshModel, MeshPrimitiveModel meshPrimitiveModel, List<Runnable> renderCommand, Map<String, AccessorModel> attributes, AccessorModel positionsAccessorModel, AccessorModel normalsAccessorModel) {
 		int glVertexArray = GL30.glGenVertexArrays();
 		gltfRenderData.add(() -> GL30.glDeleteVertexArrays(glVertexArray));
@@ -3220,11 +3223,18 @@ public class RenderedGltfModel {
 		normal.transpose();
 		normal.mulLocal(CURRENT_NORMAL);
 		
-		CURRENT_SHADER_INSTANCE.MODEL_VIEW_MATRIX.set(pose);
+		Matrix4f modelView = new Matrix4f(pose);
+		Matrix3f normalMatrix = new Matrix3f(normal);
+		if(CURRENT_POSE_APPLY_VIEW_MATRIX) {
+			modelView = new Matrix4f(RenderSystem.getModelViewMatrix()).mul(modelView);
+			normalMatrix = new Matrix3f(RenderSystem.getModelViewMatrix()).mul(normalMatrix);
+		}
+
+		CURRENT_SHADER_INSTANCE.MODEL_VIEW_MATRIX.set(modelView);
 		CURRENT_SHADER_INSTANCE.MODEL_VIEW_MATRIX.upload();
 		
-		CURRENT_SHADER_INSTANCE.LIGHT0_DIRECTION.set((new Vector3f(LIGHT0_DIRECTION)).mulTranspose(normal));
-		CURRENT_SHADER_INSTANCE.LIGHT1_DIRECTION.set((new Vector3f(LIGHT1_DIRECTION)).mulTranspose(normal));
+		CURRENT_SHADER_INSTANCE.LIGHT0_DIRECTION.set((new Vector3f(LIGHT0_DIRECTION)).mulTranspose(normalMatrix));
+		CURRENT_SHADER_INSTANCE.LIGHT1_DIRECTION.set((new Vector3f(LIGHT1_DIRECTION)).mulTranspose(normalMatrix));
 		CURRENT_SHADER_INSTANCE.LIGHT0_DIRECTION.upload();
 		CURRENT_SHADER_INSTANCE.LIGHT1_DIRECTION.upload();
 	}
@@ -3241,14 +3251,21 @@ public class RenderedGltfModel {
 		normal.transpose();
 		normal.mulLocal(CURRENT_NORMAL);
 		
-		pose.get(BUF_FLOAT_16);
+		Matrix4f modelView = new Matrix4f(pose);
+		Matrix3f normalMatrix = new Matrix3f(normal);
+		if(CURRENT_POSE_APPLY_VIEW_MATRIX) {
+			modelView = new Matrix4f(RenderSystem.getModelViewMatrix()).mul(modelView);
+			normalMatrix = new Matrix3f(RenderSystem.getModelViewMatrix()).mul(normalMatrix);
+		}
+
+		modelView.get(BUF_FLOAT_16);
 		GL20.glUniformMatrix4fv(MODEL_VIEW_MATRIX, false, BUF_FLOAT_16);
 		
-		pose.invert();
-		pose.get(BUF_FLOAT_16);
+		modelView.invert();
+		modelView.get(BUF_FLOAT_16);
 		GL20.glUniformMatrix4fv(MODEL_VIEW_MATRIX_INVERSE, false, BUF_FLOAT_16);
 		
-		normal.get(BUF_FLOAT_9);
+		normalMatrix.get(BUF_FLOAT_9);
 		GL20.glUniformMatrix3fv(NORMAL_MATRIX, false, BUF_FLOAT_9);
 	}
 	
@@ -5086,7 +5103,12 @@ public class RenderedGltfModel {
 	}
 	
 	public static void setCurrentPose(Matrix4f currentPose) {
+		setCurrentPose(currentPose, true);
+	}
+
+	public static void setCurrentPose(Matrix4f currentPose, boolean applyViewMatrix) {
 		CURRENT_POSE = currentPose;
+		CURRENT_POSE_APPLY_VIEW_MATRIX = applyViewMatrix;
 	}
 	
 	public static void setCurrentNormal(Matrix3f currentNormal) {

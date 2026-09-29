@@ -1,0 +1,31 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT License"
+issueTrackerURL="https://github.com/ModularMods/MCglTF/issues/"
+
+[[mods]]
+modId="mcgltf"
+version="1.21.1-neoforge-2.1.0.0"
+displayName="MCglTF"
+updateJSONURL="https://raw.githubusercontent.com/SoonAF/MCglTF/1.21.1-NeoForge/updates.json"
+displayURL="https://www.curseforge.com/minecraft/mc-mods/mcgltf/"
+logoFile="icon.png"
+credits="Marco Hutter (javagl), for making JglTF and jMonkeyEngine 3 team, for making MikkTSpace generator."
+authors="TimLee9024, Protoxy"
+description='''
+A glTF model loader library based on JglTF for Minecraft.
+'''
+
+[[dependencies.mcgltf]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.249,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.mcgltf]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.22)"
+ordering="NONE"
+side="BOTH"

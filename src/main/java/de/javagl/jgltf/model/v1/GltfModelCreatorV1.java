@@ -632,7 +632,7 @@ public class GltfModelCreatorV1
         	if(extras != null) {
         		JsonElement extra = new Gson().toJsonTree(extras).getAsJsonObject().get(MCglTF.RESOURCE_LOCATION);
         		if(extra != null) {
-        			imageModel.setImageData(MCglTF.getInstance().getImageResource(new ResourceLocation(extra.getAsString())));
+            imageModel.setImageData(MCglTF.getInstance().getImageResource(ResourceLocation.parse(extra.getAsString())));
         			continue;
         		}
         	}
@@ -759,7 +759,7 @@ public class GltfModelCreatorV1
         	if(extras != null) {
         		JsonElement extra = new Gson().toJsonTree(extras).getAsJsonObject().get(MCglTF.RESOURCE_LOCATION);
         		if(extra != null) {
-        			bufferModel.setBufferData(MCglTF.getInstance().getBufferResource(new ResourceLocation(extra.getAsString())));
+            bufferModel.setBufferData(MCglTF.getInstance().getBufferResource(ResourceLocation.parse(extra.getAsString())));
         			continue;
         		}
         	}
